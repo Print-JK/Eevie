@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <h2>Eevie AI</h2>
+      <div class="header-controls">
+        <label class="toggle-container" title="Toggle Text-to-Speech">
+          <input type="checkbox" id="tts-toggle" checked>
+          <span class="slider"></span>
+          <span class="toggle-label">TTS</span>
+        </label>
+        <select id="provider-selector">
+          <option value="ollama">Ollama (Local)</option>
+          <option value="lmstudio">LM Studio (Local)</option>
+          <option value="claude">Anthropic Claude</option>
+          <option value="openai">OpenAI ChatGPT</option>
+        </select>
+      </div>
+    </header>
+
+    <div id="chat-stream" class="chat-container"></div>
+
+    <footer class="input-container">
+      <div class="mode-switch">
+        <button id="mode-text-btn" class="active">Text</button>
+        <button id="mode-voice-btn">Voice</button>
+      </div>
+
+      <div id="text-input-wrapper" class="input-wrapper">
+        <textarea id="prompt-input" rows="2" placeholder="Ask Eevie or type '/'..."></textarea>
+        <button id="send-btn">Send</button>
+      </div>
+
+      <div id="voice-input-wrapper" class="voice-wrapper hidden">
+        <button id="mic-trigger" class="mic-button">
+          <span class="mic-icon">🎙️</span>
+          <span id="voice-status">Tap to Speak</span>
+        </button>
+      </div>
+    </footer>
+  </div>
+  <script type="module" src="sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "Eevie - Local AI Browser Agent",
+  "version": "1.0.0",
+  "description": "Local-first AI assistant with voice I/O and multi-model routing.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "contextMenus",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:11434/*",
+    "http://127.0.0.1:1234/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*"
+  ],
+  "background": {
+    "scripts": ["background/service_worker.js"]
+  },
+  "sidebar_action": {
+    "default_panel": "sidebar/sidebar.html",
+    "default_icon": "assets/icons/icon-32.png",
+    "default_title": "Eevie Agent"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/content_script.js"],
+      "css": ["content/content_styles.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "lib/vendor/*",
+        "assets/*"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
