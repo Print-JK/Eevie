@@ -1,49 +1,47 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <link rel="stylesheet" href="sidebar.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eevie Agent</title>
+  <link rel="stylesheet" href="sidebar.css" />
 </head>
 <body>
-  <div id="app">
-    <header class="header">
-      <h2>Eevie AI</h2>
+  <div class="eevie-container">
+    <header class="eevie-header">
+      <div class="header-left">
+        <h2>Eevie</h2>
+        <span class="status-badge">Local (qwen2.5:3b)</span>
+      </div>
       <div class="header-controls">
-        <label class="toggle-container" title="Toggle Text-to-Speech">
-          <input type="checkbox" id="tts-toggle" checked>
-          <span class="slider"></span>
-          <span class="toggle-label">TTS</span>
-        </label>
-        <select id="provider-selector">
-          <option value="ollama">Ollama (Local)</option>
-          <option value="lmstudio">LM Studio (Local)</option>
-          <option value="claude">Anthropic Claude</option>
-          <option value="openai">OpenAI ChatGPT</option>
-        </select>
+        <button id="tts-toggle" class="icon-button" title="Toggle Voice Output">🔊</button>
       </div>
     </header>
 
-    <div id="chat-stream" class="chat-container"></div>
+    <main id="chat-stream" class="chat-viewport"></main>
 
-    <footer class="input-container">
-      <div class="mode-switch">
-        <button id="mode-text-btn" class="active">Text</button>
-        <button id="mode-voice-btn">Voice</button>
+    <footer class="input-section">
+      <div class="mode-toggles">
+        <button id="mode-text-btn" class="toggle-tab active" type="button">Text</button>
+        <button id="mode-voice-btn" class="toggle-tab" type="button">Voice</button>
       </div>
 
-      <div id="text-input-wrapper" class="input-wrapper">
-        <textarea id="prompt-input" rows="2" placeholder="Ask Eevie or type '/'..."></textarea>
-        <button id="send-btn">Send</button>
+      <!-- Text Mode Panel -->
+      <div id="text-input-panel" class="input-panel">
+        <textarea id="prompt-input" placeholder="Ask Eevie or summarize active page..."></textarea>
+        <button id="send-btn" type="button">Send</button>
       </div>
 
-      <div id="voice-input-wrapper" class="voice-wrapper hidden">
-        <button id="mic-trigger" class="mic-button">
+      <!-- Voice Mode Panel -->
+      <div id="voice-input-panel" class="input-panel hidden">
+        <button id="mic-trigger" class="mic-button" type="button">
           <span class="mic-icon">🎙️</span>
-          <span id="voice-status">Tap to Speak</span>
+          <span id="mic-label">Press to Talk</span>
         </button>
       </div>
     </footer>
   </div>
-  <script type="module" src="sidebar.js"></script>
+
+  <script type="module" src="panel.js"></script>
 </body>
 </html>

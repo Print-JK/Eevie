@@ -1,69 +1,91 @@
+// content/content_script.js
 (() => {
-  let suggestionPill = null;
+  console.log("[Eevie] Content script injected and active on:", window.location.href);
 
-  // Listen for user text highlight events
-  document.addEventListener('mouseup', (event) => {
-    const selection = window.getSelection();
-    const selectedText = selection.toString().trim();
+  let floatingBtn = null;
 
-    if (selectedText.length > 5) {
-      showSuggestionPill(event.pageX, event.pageY, selectedText);
-    } else if (suggestionPill) {
-      removeSuggestionPill();
+  function removeFloatingAction() {
+    if (floatingBtn) {
+      floatingBtn.remove();
+      floatingBtn = null;
+    }
+  }
+
+  function renderFloatingAction(x, y, selectedText) {
+    removeFloatingAction();
+
+    floatingBtn = document.createElement("button");
+    floatingBtn.id = "eevie-floating-trigger";
+    floatingBtn.type = "button";
+    floatingBtn.textContent = "✨ Summarize with Eevie";
+
+    // Set high-priority inline styles to bypass any page stylesheet collisions
+    Object.assign(floatingBtn.style, {
+      position: "absolute",
+      top: `${y + 10}px`,
+      left: `${Math.max(10, x - 40)}px`,
+      zIndex: "2147483647",
+      backgroundColor: "#1e1e2e",
+      color: "#cdd6f4",
+      border: "1px solid #89b4fa",
+      borderRadius: "8px",
+      padding: "6px 12px",
+      fontSize: "13px",
+      fontWeight: "bold",
+      fontFamily: "system-ui, sans-serif",
+      cursor: "pointer",
+      boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
+      pointerEvents: "auto"
+    });
+
+    floatingBtn.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log("[Eevie] Trigger clicked for selected text:", selectedText.slice(0, 50) + "...");
+
+      browser.runtime.sendMessage({
+        action: "REQUEST_SIDEBAR_SUMMARY",
+        selectedText: selectedText
+      });
+
+      removeFloatingAction();
+    });
+
+    document.documentElement.appendChild(floatingBtn);
+  }
+
+  document.addEventListener("mouseup", () => {
+    setTimeout(() => {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+
+      const text = selection.toString().trim();
+      if (text.length > 20) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        
+        // Use documentElement scroll offsets
+        const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+
+        renderFloatingAction(rect.left + scrollX, rect.bottom + scrollY, text);
+      } else {
+        removeFloatingAction();
+      }
+    }, 20); // Small delay to let selection settle
+  });
+
+  document.addEventListener("mousedown", (e) => {
+    if (floatingBtn && !floatingBtn.contains(e.target)) {
+      removeFloatingAction();
     }
   });
 
-  function showSuggestionPill(x, y, text) {
-    removeSuggestionPill();
-
-    suggestionPill = document.createElement('div');
-    suggestionPill.className = 'eevie-suggestion-pill';
-    suggestionPill.innerHTML = `
-      <div class="eevie-pill-btn" id="eevie-action-summarize">
-        <span>⚡ Summarize with Eevie</span>
-      </div>
-    `;
-
-    suggestionPill.style.left = `${x + 10}px`;
-    suggestionPill.style.top = `${y - 35}px`;
-    document.body.appendChild(suggestionPill);
-
-    document.getElementById('eevie-action-summarize').addEventListener('click', (e) => {
-      e.stopPropagation();
-      browser.runtime.sendMessage({
-        type: 'TRIGGER_ACTION',
-        action: 'summarize',
-        payload: text
-      });
-      removeSuggestionPill();
-    });
-  }
-
-  function removeSuggestionPill() {
-    if (suggestionPill) {
-      suggestionPill.remove();
-      suggestionPill = null;
-    }
-  }
-
-  // Handle document structural data harvesting on demand
+  // Listener for full-page context extraction
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === 'EXTRACT_PAGE_CONTEXT') {
-      const pageTitle = document.title;
-      // Strip script, style, and navigation noise
-      const clone = document.body.cloneNode(true);
-      const elementsToRemove = clone.querySelectorAll('script, style, nav, footer, noscript');
-      elementsToRemove.forEach(el => el.remove());
-      
-      const cleanContent = clone.innerText
-        .replace(/\s+/g, ' ')
-        .slice(0, 10000); // Window context safety bound
-
-      sendResponse({
-        title: pageTitle,
-        url: window.location.href,
-        content: cleanContent
-      });
+    if (message.action === "GET_PAGE_CONTEXT") {
+      const article = document.querySelector("article") || document.querySelector("main") || document.body;
+      sendResponse({ context: article ? article.innerText.slice(0, 5000) : "" });
     }
   });
 })();
