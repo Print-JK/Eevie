@@ -84,8 +84,33 @@
   // Listener for full-page context extraction
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "GET_PAGE_CONTEXT") {
-      const article = document.querySelector("article") || document.querySelector("main") || document.body;
-      sendResponse({ context: article ? article.innerText.slice(0, 5000) : "" });
+      browser.storage.local.get({ maxContextTokens: 6000 }).then(({ maxContextTokens }) => {
+        sendResponse(extractReadablePage(Math.max(256, Number(maxContextTokens) || 6000)));
+      }).catch(() => sendResponse(extractReadablePage(6000)));
+      return true;
     }
   });
+
+  // A small, packaged Readability-style extractor. It works on a cloned DOM so it
+  // never mutates the page and deliberately falls back to visible body text.
+  function extractReadablePage(maxTokens) {
+    const root = document.body?.cloneNode(true);
+    if (!root) return { title: document.title || "", byline: "", context: "" };
+    root.querySelectorAll("script,style,noscript,svg,canvas,iframe,nav,aside,footer,form,button,[role='navigation'],[role='banner'],[role='complementary'],.advertisement,.ads,.ad,[class*='cookie'],[id*='cookie']").forEach((node) => node.remove());
+    const candidates = [...root.querySelectorAll("article,main,[role='main'],section,div")];
+    const score = (node) => {
+      const text = (node.innerText || node.textContent || "").replace(/\s+/g, " ").trim();
+      const paragraphs = node.querySelectorAll("p,li").length;
+      const linkText = [...node.querySelectorAll("a")].reduce((n, a) => n + (a.innerText || a.textContent || "").length, 0);
+      return text.length + paragraphs * 120 - linkText * 0.7;
+    };
+    const best = candidates.filter((node) => (node.innerText || node.textContent || "").trim().length > 200).sort((a, b) => score(b) - score(a))[0] || root;
+    const content = (best.innerText || best.textContent || "").replace(/\n{3,}/g, "\n\n").replace(/[ \t]+\n/g, "\n").trim();
+    const title = document.querySelector("meta[property='og:title']")?.content || document.querySelector("h1")?.innerText?.trim() || document.title || "";
+    const byline = document.querySelector("meta[name='author']")?.content || document.querySelector("[rel='author'],.author,[class*='byline']")?.innerText?.trim() || "";
+    // Four characters per token is conservative enough to reserve room for the prompt.
+    const maxChars = Math.max(1024, maxTokens * 4);
+    const structured = [`Title: ${title}`, byline ? `Byline: ${byline}` : "", "", content].filter(Boolean).join("\n");
+    return { title, byline, context: structured.slice(0, maxChars), truncated: structured.length > maxChars, estimatedTokens: Math.ceil(Math.min(structured.length, maxChars) / 4) };
+  }
 })();

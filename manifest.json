@@ -13,6 +13,7 @@
   "host_permissions": [
     "http://localhost:11434/*",
     "http://127.0.0.1:1234/*",
+    "http://127.0.0.1:9000/*",
     "https://api.openai.com/*",
     "https://api.anthropic.com/*"
   ],
@@ -21,14 +22,17 @@
   },
   "sidebar_action": {
     "default_panel": "sidebar/sidebar.html",
-    "default_icon": "assets/icons/icon-32.png",
     "default_title": "Eevie Agent"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content/content_script.js"],
-      "css": ["content/content_styles.css"]
+      "css": ["content/content_style.css"]
     }
   ],
   "web_accessible_resources": [

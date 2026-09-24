@@ -7,11 +7,18 @@ import { STTEngine } from "../lib/voice/stt_engine.js";
 const aiManager = new AIProviderManager();
 const ttsManager = new TTSManager();
 
-// Configure local default LLM
-aiManager.setActiveProvider("ollama", {
-  endpoint: "http://localhost:11434",
-  model: "qwen2.5:3b"
-});
+const settingsDefaults = { provider: "ollama", endpoint: "http://localhost:11434", model: "qwen2.5:3b", apiKey: "", ttsEngine: "webspeech", voice: "", rate: 1, pitch: 1, whisperEndpoint: "" };
+let settings = settingsDefaults;
+async function initializeSettings() {
+  settings = { ...settingsDefaults, ...(await browser.storage.local.get(settingsDefaults)) };
+  aiManager.setActiveProvider(settings.provider, { endpoint: settings.endpoint, model: settings.model, apiKey: settings.apiKey });
+  await ttsManager.setEngine(settings.ttsEngine);
+  if (settings.voice) ttsManager.setVoice(settings.voice);
+  ttsManager.rate = settings.rate; ttsManager.pitch = settings.pitch;
+  stt?.setConfig({ endpoint: settings.whisperEndpoint });
+  const badge = document.querySelector(".status-badge");
+  if (badge) badge.textContent = `${settings.provider}: ${settings.model}`;
+}
 
 // 2. DOM Elements
 const chatStream = document.getElementById("chat-stream");
@@ -57,7 +64,6 @@ if (modeTextBtn && modeVoiceBtn && textPanel && voicePanel) {
 // 5. STT Engine Initialization with Null Guards
 const stt = new STTEngine(
   (transcript) => {
-    appendMessage("user", transcript);
     executeChatTurn(transcript);
   },
   (error) => {
@@ -89,7 +95,6 @@ if (micTrigger) {
     }
   });
 }
-}
 
 // 6. Text Mode Event Handlers
 if (sendBtn && promptInput) {
@@ -120,9 +125,8 @@ async function executeChatTurn(userText, explicitContext = null) {
   const agentMessageBubble = appendMessage("agent", "Thinking...");
 
   // Use explicitContext if passed (e.g. from highlight selection), otherwise fetch from active tab
-  const pageContext = explicitContext !== null ? explicitContext : await getActiveTabContext();
-
   try {
+    const pageContext = explicitContext !== null ? explicitContext : await getActiveTabContext();
     const stream = aiManager.provider.streamComplete({
       prompt: userText,
       context: pageContext,
@@ -142,6 +146,7 @@ async function executeChatTurn(userText, explicitContext = null) {
       ttsManager.ingestToken(token);
     }
 
+    if (isFirstToken) agentMessageBubble.textContent = "No response returned.";
     ttsManager.flush();
   } catch (err) {
     if (err.name === "AbortError") {
@@ -185,4 +190,9 @@ browser.runtime.onMessage.addListener((message) => {
   if (message.action === "REQUEST_SIDEBAR_SUMMARY" && message.selectedText) {
     executeChatTurn("Summarize this selected passage concisely in 3 bullets:", message.selectedText);
   }
+});
+
+initializeSettings().catch((error) => {
+  console.error("[Eevie] Settings initialization failed", error);
+  aiManager.setActiveProvider("ollama", settingsDefaults);
 });

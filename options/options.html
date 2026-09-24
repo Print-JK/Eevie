@@ -1,0 +1,10 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Eevie settings</title><link rel="stylesheet" href="options.css"></head><body>
+<main><h1>Eevie settings</h1><p id="status" role="status"></p>
+<label>AI provider <select id="provider"><option value="ollama">Ollama</option><option value="lmstudio">LM Studio</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option></select></label>
+<label>Endpoint <input id="endpoint" type="url" placeholder="http://localhost:11434"></label><button id="fetch-models" type="button">Fetch models</button>
+<label>Model <select id="model"></select></label><label>API key <input id="api-key" type="password" autocomplete="off" placeholder="Stored locally in Firefox"></label>
+<label>Page context limit (tokens) <input id="context-tokens" type="number" min="256" max="100000" step="256"></label>
+<label>Local Whisper endpoint (optional) <input id="whisper-endpoint" type="url" placeholder="http://127.0.0.1:9000/v1/audio/transcriptions"></label>
+<hr><label>TTS engine <select id="tts-engine"><option value="webspeech">System voice</option><option value="kokoro">Kokoro (local neural)</option></select></label><label>Voice <select id="voice"></select></label>
+<label>Rate <input id="rate" type="range" min="0.5" max="2" step="0.1"><output id="rate-value"></output></label><label>Pitch <input id="pitch" type="range" min="0" max="2" step="0.1"><output id="pitch-value"></output></label>
+<button id="save" type="button">Save settings</button></main><script type="module" src="options.js"></script></body></html>
