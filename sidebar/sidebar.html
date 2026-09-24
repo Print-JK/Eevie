@@ -14,7 +14,8 @@
         <span class="status-badge">Local (qwen2.5:3b)</span>
       </div>
       <div class="header-controls">
-        <button id="tts-toggle" class="icon-button" title="Toggle Voice Output">🔊</button>
+        <button id="tts-toggle" class="icon-button" type="button" title="Voice replies are on">🔊 Voice</button>
+        <button id="settings-btn" class="icon-button" type="button" title="Open Eevie settings">⚙ Settings</button>
       </div>
     </header>
 
@@ -28,7 +29,7 @@
 
       <!-- Text Mode Panel -->
       <div id="text-input-panel" class="input-panel">
-        <textarea id="prompt-input" placeholder="Ask Eevie or summarize active page..."></textarea>
+        <textarea id="prompt-input" placeholder="Ask Eevie, summarize the page, or say “pause video”..."></textarea>
         <button id="send-btn" type="button">Send</button>
       </div>
 
@@ -38,6 +39,7 @@
           <span class="mic-icon">🎙️</span>
           <span id="mic-label">Press to Talk</span>
         </button>
+        <p class="voice-help">Press once to start listening, speak, then press again to send. Commands such as “pause video” run on the active tab.</p>
       </div>
     </footer>
   </div>

@@ -89,7 +89,27 @@
       }).catch(() => sendResponse(extractReadablePage(6000)));
       return true;
     }
+    if (message.action === "EXECUTE_MEDIA_COMMAND") {
+      Promise.resolve(executeMediaCommand(message.command)).then(sendResponse);
+      return true;
+    }
   });
+
+  function executeMediaCommand(command = {}) {
+    const media = [...document.querySelectorAll("video, audio")].find((element) => !element.paused) || document.querySelector("video, audio");
+    if (!media) return { ok: false, error: "no audio or video was found on this page" };
+    switch (command.action) {
+      case "pause": media.pause(); return { ok: true, message: "Paused the media." };
+      case "play": return media.play().then(() => ({ ok: true, message: "Playing the media." })).catch(() => ({ ok: false, error: "the site did not allow playback" }));
+      case "mute": media.muted = true; return { ok: true, message: "Muted the media." };
+      case "unmute": media.muted = false; return { ok: true, message: "Unmuted the media." };
+      case "volumeDown": media.volume = Math.max(0, media.volume - command.amount); media.muted = false; return { ok: true, message: `Volume set to ${Math.round(media.volume * 100)}%.` };
+      case "volumeUp": media.volume = Math.min(1, media.volume + command.amount); media.muted = false; return { ok: true, message: `Volume set to ${Math.round(media.volume * 100)}%.` };
+      case "setVolume": media.volume = command.value; media.muted = command.value === 0; return { ok: true, message: `Volume set to ${Math.round(command.value * 100)}%.` };
+      case "seek": if (!Number.isFinite(media.duration)) return { ok: false, error: "this media cannot be seeked" }; media.currentTime = Math.max(0, Math.min(media.duration, media.currentTime + command.seconds)); return { ok: true, message: `Skipped ${Math.abs(command.seconds)} seconds ${command.seconds < 0 ? "back" : "forward"}.` };
+      default: return { ok: false, error: "that media command is not supported" };
+    }
+  }
 
   // A small, packaged Readability-style extractor. It works on a cloned DOM so it
   // never mutates the page and deliberately falls back to visible body text.

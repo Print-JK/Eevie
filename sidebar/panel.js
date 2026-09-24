@@ -25,6 +25,7 @@ const chatStream = document.getElementById("chat-stream");
 const promptInput = document.getElementById("prompt-input");
 const sendBtn = document.getElementById("send-btn");
 const ttsToggle = document.getElementById("tts-toggle");
+const settingsBtn = document.getElementById("settings-btn");
 
 const micTrigger = document.getElementById("mic-trigger");
 const micLabel = document.getElementById("mic-label");
@@ -40,9 +41,12 @@ if (ttsToggle) {
   ttsToggle.addEventListener("click", () => {
     const newState = !ttsManager.enabled;
     ttsManager.setEnabled(newState);
-    ttsToggle.textContent = newState ? "🔊" : "🔇";
+    ttsToggle.textContent = newState ? "🔊 Voice" : "🔇 Voice";
+    ttsToggle.title = newState ? "Voice replies are on" : "Voice replies are off";
   });
 }
+
+if (settingsBtn) settingsBtn.addEventListener("click", () => browser.runtime.openOptionsPage());
 
 // 4. Mode Switching (Text vs Voice)
 if (modeTextBtn && modeVoiceBtn && textPanel && voicePanel) {
@@ -122,6 +126,20 @@ async function executeChatTurn(userText, explicitContext = null) {
   currentAbortController = new AbortController();
 
   appendMessage("user", userText);
+  const command = parseMediaCommand(userText);
+  if (command) {
+    try {
+      const result = await executeMediaCommand(command);
+      const reply = result.message;
+      appendMessage("agent", reply);
+      speak(reply);
+    } catch (error) {
+      const reply = `I couldn't run that command: ${error.message}`;
+      appendMessage("agent", reply);
+      speak(reply);
+    }
+    return;
+  }
   const agentMessageBubble = appendMessage("agent", "Thinking...");
 
   // Use explicitContext if passed (e.g. from highlight selection), otherwise fetch from active tab
@@ -158,6 +176,33 @@ async function executeChatTurn(userText, explicitContext = null) {
     currentAbortController = null;
   }
 }
+
+// Keep browser actions local and intentionally narrow: the model never supplies
+// JavaScript or selectors, only this fixed set of media actions.
+function parseMediaCommand(text) {
+  const normalized = text.trim().toLowerCase().replace(/[!?.,]+$/g, "");
+  const volume = normalized.match(/^(?:set )?(?:the )?volume(?: to)? (\d{1,3})(?:\s*(?:%|percent))?$/);
+  if (volume) return { action: "setVolume", value: Math.max(0, Math.min(100, Number(volume[1]))) / 100 };
+  if (/^(?:pause|stop)(?: (?:the |a )?(?:video|audio|media))?$/.test(normalized)) return { action: "pause" };
+  if (/^(?:play|resume|continue)(?: (?:the |a )?(?:video|audio|media))?$/.test(normalized)) return { action: "play" };
+  if (/^(?:mute)(?: (?:the |a )?(?:video|audio|media))?$/.test(normalized)) return { action: "mute" };
+  if (/^(?:unmute)(?: (?:the |a )?(?:video|audio|media))?$/.test(normalized)) return { action: "unmute" };
+  if (/^(?:lower|turn down|decrease)(?: (?:the )?volume)?$/.test(normalized)) return { action: "volumeDown", amount: 0.1 };
+  if (/^(?:raise|turn up|increase)(?: (?:the )?volume)?$/.test(normalized)) return { action: "volumeUp", amount: 0.1 };
+  const seek = normalized.match(/^(?:skip |seek )?(forward|back|backward) (\d+)(?:\s*(?:seconds?|secs?))?$/);
+  if (seek) return { action: "seek", seconds: (seek[1] === "forward" ? 1 : -1) * Number(seek[2]) };
+  return null;
+}
+
+async function executeMediaCommand(command) {
+  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) throw new Error("there is no active tab");
+  const response = await browser.tabs.sendMessage(tab.id, { action: "EXECUTE_MEDIA_COMMAND", command });
+  if (!response?.ok) throw new Error(response?.error || "no playable audio or video was found on this page");
+  return response;
+}
+
+function speak(text) { ttsManager.ingestToken(text); ttsManager.flush(); }
 
 // 8. Safe Tab Context Extraction
 async function getActiveTabContext() {
